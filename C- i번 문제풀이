@@ -1,2 +1,205 @@
-import pandas as pd
-from sklearn.model_selection import train_test_split
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "source": [
+        "1. 연습문제 C번 / 새로운 노선의 평균 운임을 예측하는 모델을 찾으시오."
+      ],
+      "metadata": {
+        "id": "QH3QO9Zv4sZ4"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "C - i 번 / 범주형 변수(ex. SW)들을 가변수로 변환하시오. 그런 다음, 데이터를 학습 데이터셋과 검증 데이터셋으로 분할하시오. 학습 데이터셋에 모델을 적합하고 이를 검증 데이터셋으로 평가하시오."
+      ],
+      "metadata": {
+        "id": "p43Lv1OS5qEN"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "1. 필요 라이브러리 불러오기"
+      ],
+      "metadata": {
+        "id": "kOSS0Ea48aRE"
+      }
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 1,
+      "metadata": {
+        "id": "Y_sn6lis3vvM"
+      },
+      "outputs": [],
+      "source": [
+        "import pandas as pd # (맨 처음에 이미 언급되어 중복 시 생략 가능)\n",
+        "from sklearn.model_selection import train_test_split # 데이터를 학습용 / 검증용으로 나누는 함수, 전체 데이터를 70:30 비율로 분할하여 모델 훈련과 성능 평가에 사용\n",
+        "from sklearn.linear_model import LinearRegression # 선형 회귀 모델 객체를 생성\n",
+        "from sklearn.metrics import mean_squared_error, r2_score # 모델의 성능 평가 지표를 계산, {mean_squared_error: 예측값과 실제값 사이의 평균 제곱 오차 (RMSE 등으로 활용), r2_score: 결정계수 (모델 설명력, 1에 가까울수록 좋음)}"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "2. 데이터 불러오기 & 범주형 변수 가변수화"
+      ],
+      "metadata": {
+        "id": "Ad3GGt9D8Yf9"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 데이터 로딩 (이미 a번 문제에서 df로 불러왔기에 생략 가능)\n",
+        "df = pd.read_csv(\"Airfares.csv\")\n",
+        "\n",
+        "# 범주형 변수 가변수화 (drop_first로 다중공선성 방지)\n",
+        "categorical_vars = ['S_CODE', 'S_CITY', 'E_CODE', 'E_CITY', 'VACATION', 'SW', 'SLOT', 'GATE'] # 'S_CODE', 'S_CITY', 'E_CODE', 'E_CITY'도 범주형 변수임. 허나, '숫자적 의미가 없고 명목형 데이터'임으로 회귀 모델에서 사용하기 위해서는 가변수 처리되어야 함.\n",
+        "df_encoded = pd.get_dummies(df, columns=categorical_vars, drop_first=True)\n",
+        "# pd.get_dummies() : 범주형을 숫자형 가변수로 변환\n",
+        "# columns=categorical_vars : 가변수화할 범주형 변수 지정\n",
+        "# drop_first=True\t: 첫 범주는 제거하여 중복 방지\n",
+        "# df_encoded : 새 데이터프레임으로 저장\n",
+        "\n",
+        "# 결측치 제거\n",
+        "df_encoded.dropna(inplace=True)\n"
+      ],
+      "metadata": {
+        "collapsed": true,
+        "id": "c4xXxUCK4NM2"
+      },
+      "execution_count": 2,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "3. 변수 분리 및 학습 & 검증데이터셋으로 분할"
+      ],
+      "metadata": {
+        "id": "cMbBT8TZ9APr"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "X = df_encoded.drop(columns=['FARE'])  # 독립변수(전체 데이터프레임 (운임에 영향을 줄 수 있는 변수들))\n",
+        "y = df_encoded['FARE']                 # 종속변수(예측 대상인 FARE (운임))\n",
+        "\n",
+        "# 학습 70% / 검증 30% 분할\n",
+        "X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.3, random_state=42)\n",
+        "# X_train, y_train : 학습용 데이터 70개\n",
+        "# X_valid, y_valid : 검증용 데이터 30개\n",
+        "# train_test_split\t: 이 두 데이터를 자동으로 나누어주는 함수\n",
+        "# random_state=42\t: 데이터 분할을 매번 같게 유지하기 위한 시드값 (재현 가능성 확보)"
+      ],
+      "metadata": {
+        "id": "_IScnfJR7vmd"
+      },
+      "execution_count": 6,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "4. 회귀 모델 학습 및 평가"
+      ],
+      "metadata": {
+        "id": "Po_rzPqx-JtF"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# 선형 회귀 모델 학습\n",
+        "model = LinearRegression()\n",
+        "model.fit(X_train, y_train) # 학습 데이터로 모델 훈련. 즉, 변수들의 계수(회귀계수)를 학습하여 운임(FARE)를 예측할 수 있도록 함\n",
+        "\n",
+        "\n",
+        "# 예측\n",
+        "y_pred = model.predict(X_valid) # 훈련된 모델에 검증 데이터(X_valid)를 넣어 운임 예측값 y_pred 생성\n",
+        "\n",
+        "# 성능 평가\n",
+        "#rmse = mean_squared_error(y_valid, y_pred, squared=False) # squared = False : 평균 제곱 오차(mse : mean squared error)의 제곱근을 구하는  → RMSE 계산\n",
+        "# 위 코딩에서 오류 발생 시 다음 코딩 사용할 것\n",
+        "mse = mean_squared_error(y_valid, y_pred)\n",
+        "rmse = mse**0.5\n",
+        "r2 = r2_score(y_valid, y_pred) # r2 : 모델이 전체 데이터의 분산(변동)을 얼마나 잘 설명하는지를 수치화\n",
+        "\n",
+        "print(f\"검증 RMSE: {rmse:.2f}\")\n",
+        "print(f\"검증 R²: {r2:.4f}\")\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "AM9X3ac6-Gyd",
+        "outputId": "6a6f09fa-1dc3-4722-f6da-0c38dafb1f17"
+      },
+      "execution_count": 9,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "검증 RMSE: 31.42\n",
+            "검증 R²: 0.8380\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "5. 평가 결과"
+      ],
+      "metadata": {
+        "id": "EFJ8HSUgELOP"
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "검증 RMSE: 31.42\n",
+        "검증 R²: 0.8380\n",
+        "\n",
+        "검증 결과로 나온 다음 두 성능 지표는 모델이 얼마나 정확하게 항공 운임을 예측했는지를 나타냄.\n",
+        "\n",
+        "\n",
+        "RMSE (Root Mean Squared Error): 31.42 라는 지표를 통해 모델이 예측한 항공 운임이 실제 값과 평균적으로 약 31.42달러 차이가 난다는 것을 알 수 있음.\n",
+        "\n",
+        "\n",
+        "R² (결정계수): 0.8380 라는 지표를 통해 전체 운임 변동성의 약 83.8%를 모델이 설명하고 있다는 것을 알 수 있음. 매우 우수한 성능을 가진 모델임"
+      ],
+      "metadata": {
+        "id": "PJ1xpdvcEOJ_"
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "xtvUrKcZCkqz"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
